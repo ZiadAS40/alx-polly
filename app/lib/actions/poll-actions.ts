@@ -2,44 +2,55 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { createPollSchema, voteSchema, updatePollSchema } from "@/lib/validations/poll";
+import { rateLimit } from "@/lib/rate-limit";
 
 // CREATE POLL
 export async function createPoll(formData: FormData) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const question = formData.get("question") as string;
-  const options = formData.getAll("options").filter(Boolean) as string[];
+    const question = formData.get("question") as string;
+    const options = formData.getAll("options").filter(Boolean) as string[];
 
-  if (!question || options.length < 2) {
-    return { error: "Please provide a question and at least two options." };
-  }
-
-  // Get user from session
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) {
-    return { error: userError.message };
-  }
-  if (!user) {
-    return { error: "You must be logged in to create a poll." };
-  }
-
-  const { error } = await supabase.from("polls").insert([
-    {
-      user_id: user.id,
+    // Validate input
+    const validatedData = createPollSchema.parse({
       question,
       options,
-    },
-  ]);
+    });
 
-  if (error) {
-    return { error: error.message };
+    // Get user from session
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) {
+      return { error: userError.message };
+    }
+    if (!user) {
+      return { error: "You must be logged in to create a poll." };
+    }
+
+    const { error } = await supabase.from("polls").insert([
+      {
+        user_id: user.id,
+        question: validatedData.question,
+        options: validatedData.options,
+      },
+    ]);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath("/polls");
+    return { error: null };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Invalid input data' };
   }
-
-  revalidatePath("/polls");
-  return { error: null };
 }
 
 // GET USER POLLS
@@ -75,68 +86,157 @@ export async function getPollById(id: string) {
 
 // SUBMIT VOTE
 export async function submitVote(pollId: string, optionIndex: number) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    
+    // Validate input
+    const validatedData = voteSchema.parse({
+      pollId,
+      optionIndex,
+    });
 
-  // Optionally require login to vote
-  // if (!user) return { error: 'You must be logged in to vote.' };
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("votes").insert([
-    {
-      poll_id: pollId,
-      user_id: user?.id ?? null,
-      option_index: optionIndex,
-    },
-  ]);
+    // Rate limiting for voting
+    const rateLimitKey = user ? `vote:${user.id}` : `vote:anonymous:${pollId}`;
+    const rateLimitResult = rateLimit(rateLimitKey, 5, 60000); // 5 votes per minute
+    
+    if (!rateLimitResult.success) {
+      return { error: "Too many votes. Please wait before voting again." };
+    }
 
-  if (error) return { error: error.message };
-  return { error: null };
+    // Check if user has already voted on this poll
+    if (user) {
+      const { data: existingVote } = await supabase
+        .from("votes")
+        .select("id")
+        .eq("poll_id", validatedData.pollId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (existingVote) {
+        return { error: "You have already voted on this poll." };
+      }
+    }
+
+    // Verify poll exists and get options count
+    const { data: poll } = await supabase
+      .from("polls")
+      .select("options")
+      .eq("id", validatedData.pollId)
+      .single();
+
+    if (!poll) {
+      return { error: "Poll not found." };
+    }
+
+    if (validatedData.optionIndex >= poll.options.length) {
+      return { error: "Invalid option selected." };
+    }
+
+    const { error } = await supabase.from("votes").insert([
+      {
+        poll_id: validatedData.pollId,
+        user_id: user?.id ?? null,
+        option_index: validatedData.optionIndex,
+      },
+    ]);
+
+    if (error) return { error: error.message };
+    return { error: null };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Invalid input data' };
+  }
 }
 
 // DELETE POLL
 export async function deletePoll(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("polls").delete().eq("id", id);
-  if (error) return { error: error.message };
-  revalidatePath("/polls");
-  return { error: null };
+  try {
+    const supabase = await createClient();
+    
+    // Get user from session
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) {
+      return { error: userError.message };
+    }
+    if (!user) {
+      return { error: "You must be logged in to delete a poll." };
+    }
+
+    // Only allow deleting polls owned by the user
+    const { error } = await supabase
+      .from("polls")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) return { error: error.message };
+
+    revalidatePath("/polls");
+    return { error: null };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Invalid input data' };
+  }
 }
 
 // UPDATE POLL
 export async function updatePoll(pollId: string, formData: FormData) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const question = formData.get("question") as string;
-  const options = formData.getAll("options").filter(Boolean) as string[];
+    const question = formData.get("question") as string;
+    const options = formData.getAll("options").filter(Boolean) as string[];
 
-  if (!question || options.length < 2) {
-    return { error: "Please provide a question and at least two options." };
+    // Validate input
+    const validatedData = updatePollSchema.parse({
+      pollId,
+      question,
+      options,
+    });
+
+    // Get user from session
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) {
+      return { error: userError.message };
+    }
+    if (!user) {
+      return { error: "You must be logged in to update a poll." };
+    }
+
+    // Only allow updating polls owned by the user
+    const { error } = await supabase
+      .from("polls")
+      .update({ 
+        question: validatedData.question, 
+        options: validatedData.options 
+      })
+      .eq("id", validatedData.pollId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath("/polls");
+    return { error: null };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Invalid input data' };
   }
-
-  // Get user from session
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) {
-    return { error: userError.message };
-  }
-  if (!user) {
-    return { error: "You must be logged in to update a poll." };
-  }
-
-  // Only allow updating polls owned by the user
-  const { error } = await supabase
-    .from("polls")
-    .update({ question, options })
-    .eq("id", pollId)
-    .eq("user_id", user.id);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { error: null };
 }

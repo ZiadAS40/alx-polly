@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { login } from '@/app/lib/actions/auth-actions';
+import { loginSchema } from '@/lib/validations/auth';
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +21,17 @@ export default function LoginPage() {
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+
+    // Client-side validation
+    try {
+      loginSchema.parse({ email, password });
+    } catch (validationError) {
+      if (validationError instanceof Error) {
+        setError(validationError.message);
+        setLoading(false);
+        return;
+      }
+    }
 
     const result = await login({ email, password });
 

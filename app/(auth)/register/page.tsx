@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { register } from '@/app/lib/actions/auth-actions';
+import { registerSchema } from '@/lib/validations/auth';
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,17 @@ export default function RegisterPage() {
       setError('Passwords do not match');
       setLoading(false);
       return;
+    }
+
+    // Client-side validation
+    try {
+      registerSchema.parse({ name, email, password });
+    } catch (validationError) {
+      if (validationError instanceof Error) {
+        setError(validationError.message);
+        setLoading(false);
+        return;
+      }
     }
 
     const result = await register({ name, email, password });
