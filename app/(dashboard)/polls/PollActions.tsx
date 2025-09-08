@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/app/lib/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { deletePoll } from "@/app/lib/actions/poll-actions";
 
@@ -14,10 +13,10 @@ interface Poll {
 
 interface PollActionsProps {
   poll: Poll;
+  currentUserId?: string | null;
 }
 
-export default function PollActions({ poll }: PollActionsProps) {
-  const { user } = useAuth();
+export default function PollActions({ poll, currentUserId }: PollActionsProps) {
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this poll?")) {
       await deletePoll(poll.id);
@@ -39,7 +38,7 @@ export default function PollActions({ poll }: PollActionsProps) {
           </div>
         </div>
       </Link>
-      {user && user.id === poll.user_id && (
+      {currentUserId && currentUserId === poll.user_id && (
         <div className="flex gap-2 p-2">
           <Button asChild variant="outline" size="sm">
             <Link href={`/polls/${poll.id}/edit`}>Edit</Link>

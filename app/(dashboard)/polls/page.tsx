@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getUserPolls } from '@/app/lib/actions/poll-actions';
-import PollActions from './PollActions'; 
+import PollActions from './PollActions';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * User Dashboard - Polls Management Page
@@ -22,6 +23,8 @@ import PollActions from './PollActions';
 export default async function PollsPage() {
   // Fetch user's polls from the database (server-side)
   const { polls, error } = await getUserPolls();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   return (
     <div className="space-y-6">
@@ -37,7 +40,9 @@ export default async function PollsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {polls && polls.length > 0 ? (
           // Display user's polls with management actions
-          polls.map((poll) => <PollActions key={poll.id} poll={poll} />)
+          polls.map((poll) => (
+            <PollActions key={poll.id} poll={poll} currentUserId={user?.id ?? null} />
+          ))
         ) : (
           // Empty state for users with no polls
           <div className="flex flex-col items-center justify-center py-12 text-center col-span-full">
