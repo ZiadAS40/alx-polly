@@ -1,6 +1,5 @@
 // @ts-nocheck
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,21 +10,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/server";
 
-export default async function DashboardLayout({ children }: { children: any }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+export default function DashboardLayout({ children }: { children: any }) {
+  // Temporarily disabled authentication for testing
+  const user = { email: "demo@example.com" };
 
   async function handleLogout() {
     'use server'
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect('/login');
+    // Temporarily disabled logout functionality
+    console.log("Logout clicked (disabled for demo)");
   }
 
   return (

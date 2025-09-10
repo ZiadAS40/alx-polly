@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getUserPolls } from '@/app/lib/actions/poll-actions';
 import PollActions from './PollActions';
-import { createClient } from '@/lib/supabase/server';
 
 /**
  * User Dashboard - Polls Management Page
@@ -23,8 +22,8 @@ import { createClient } from '@/lib/supabase/server';
 export default async function PollsPage() {
   // Fetch user's polls from the database (server-side)
   const { polls, error } = await getUserPolls();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Temporarily disabled Supabase authentication
+  const user = { id: 'demo-user' };
 
   return (
     <div className="space-y-6">

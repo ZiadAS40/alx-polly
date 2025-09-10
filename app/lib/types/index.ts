@@ -23,8 +23,13 @@ export interface Poll {
   createdBy: string; // User ID
   createdAt: Date;
   updatedAt: Date;
-  endDate?: Date;
+  expiresAt?: Date;
   settings: PollSettings;
+}
+
+export interface PollWithVotes extends Poll {
+  totalVotes: number;
+  isExpired: boolean;
 }
 
 export interface PollSettings {
@@ -47,7 +52,7 @@ export interface CreatePollFormData {
   description?: string;
   options: string[];
   settings: PollSettings;
-  endDate?: string;
+  expiresAt?: string;
 }
 
 export interface LoginFormData {

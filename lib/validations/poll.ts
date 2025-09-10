@@ -18,6 +18,17 @@ export const createPollSchema = z.object({
       (options) => new Set(options).size === options.length,
       'Options must be unique'
     ),
+  expiresAt: z.string()
+    .optional()
+    .refine(
+      (date) => {
+        if (!date) return true;
+        const expirationDate = new Date(date);
+        const now = new Date();
+        return expirationDate > now;
+      },
+      'Expiration date must be in the future'
+    ),
 });
 
 export const voteSchema = z.object({
