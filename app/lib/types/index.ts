@@ -65,3 +65,22 @@ export interface RegisterFormData {
   email: string;
   password: string;
 }
+
+// Client-side poll types
+export interface PollOptionWithVotes {
+  id: string;
+  text: string;
+  votes: number;
+  percentage: number;
+}
+
+export interface PollResults {
+  id: string;
+  question: string;
+  options: PollOptionWithVotes[];
+  totalVotes: number;
+  isExpired: boolean;
+  createdAt: Date;
+  expiresAt?: Date;
+  createdBy: string;
+}
