@@ -51,14 +51,14 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-[70vh]">
+      <Card className="w-full max-w-md" aria-busy={loading}>
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
           <CardDescription className="text-center">Sign up to start creating and sharing polls</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input 
@@ -67,6 +67,7 @@ export default function RegisterPage() {
                 type="text" 
                 placeholder="John Doe" 
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -78,6 +79,7 @@ export default function RegisterPage() {
                 placeholder="your@email.com" 
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -88,6 +90,7 @@ export default function RegisterPage() {
                 type="password" 
                 required
                 autoComplete="new-password"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -98,10 +101,11 @@ export default function RegisterPage() {
                 type="password" 
                 required
                 autoComplete="new-password"
+                disabled={loading}
               />
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && <p className="text-red-500 text-sm" role="alert" aria-live="polite">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading} aria-disabled={loading}>
               {loading ? 'Registering...' : 'Register'}
             </Button>
           </form>

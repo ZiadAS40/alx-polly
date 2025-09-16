@@ -44,14 +44,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-[70vh]">
+      <Card className="w-full max-w-md" aria-busy={loading}>
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">Login to ALX Polly</CardTitle>
           <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
@@ -61,6 +61,7 @@ export default function LoginPage() {
                 placeholder="your@email.com" 
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -71,10 +72,11 @@ export default function LoginPage() {
                 type="password" 
                 required
                 autoComplete="current-password"
+                disabled={loading}
               />
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && <p className="text-red-500 text-sm" role="alert" aria-live="polite">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading} aria-disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
